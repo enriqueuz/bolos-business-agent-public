@@ -1,0 +1,21 @@
+{
+  "message": {
+    "id": "wamid.fixture.131060",
+    "timestamp": "1730092800",
+    "type": "unsupported",
+    "from": "584140000001",
+    "errors": [
+      {
+        "code": 131060,
+        "title": "This message is unavailable.",
+        "error_data": {"details": "Message content unavailable"}
+      }
+    ],
+    "kapso": {
+      "direction": "inbound",
+      "content": "[Unsupported message - Error 131060]: This message is unavailable."
+    }
+  },
+  "conversation": {"id": "conv_fixture", "phone_number": "584140000001"},
+  "phone_number_id": "123"
+}

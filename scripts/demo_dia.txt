@@ -1,0 +1,20 @@
+# Un día de la tienda de repuestos (demo end-to-end con modelos reales)
+hola
+Repuestos El Rayo
+repuestos y accesorios de moto
+1
+efectivo en dólares, pago móvil y punto
+vendí 2 bujías NGK a 3$ cada una en efectivo
+compré 10 cadenas 428 a 8$ cada una a Repuestos El Gocho, pagué por pago móvil
+la cadena 428 la vendo a 14$
+Moisés se llevó una cadena 428 fiada
+sí
+pagué 25$ de luz
+¿cuánto me debe Moisés?
+Moisés me abonó 5$ en efectivo
+/cita 9 no era Moisés, era Pedro
+Moisés siempre paga los viernes
+¿cuánto vendí hoy y cuánto gané?
+cierra caja
+¿cuánto me debe Pedro y cuánto tiene Moisés a favor?
+¿cuál es mi producto más vendido este mes?

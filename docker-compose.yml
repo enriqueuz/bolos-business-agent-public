@@ -1,0 +1,133 @@
+name: bolos-business-showcase
+
+x-app: &app
+  build:
+    context: .
+    target: dev
+  env_file:
+    - path: .env
+      required: false
+  environment: &app-env
+    DATABASE_URL: postgresql+asyncpg://bolos:bolos@db:5432/bolos
+    REDIS_URL: redis://redis:6379/0
+    APP_ENV: development
+    HOME: /tmp
+    RUFF_CACHE_DIR: /tmp/ruff
+    MESSAGING_PROVIDER: ${MESSAGING_PROVIDER:-console}
+    SIGNUP_MODE: ${SIGNUP_MODE:-open}
+  user: "${UID:-1000}:${GID:-1000}"
+  volumes:
+    - ./app:/app/app
+    - ./alembic:/app/alembic
+    - ./alembic.ini:/app/alembic.ini
+    - ./pyproject.toml:/app/pyproject.toml
+    - ./tests:/app/tests
+    - ./evals:/app/evals
+    - ./security_tests:/app/security_tests
+    - ./scripts:/app/scripts
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: bolos
+      POSTGRES_PASSWORD: bolos
+      POSTGRES_DB: bolos
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bolos"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7
+    ports: ["127.0.0.1:6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  api:
+    <<: *app
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *app
+    command: ["arq", "app.worker.WorkerSettings", "--watch", "app"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Verificación local del modo "un solo servicio" (Railway) antes de desplegar: mismo Postgres/Redis
+  # que api+worker, pero un único contenedor con RUN_WORKER_IN_API=true y UVICORN_WORKERS=1.
+  # `docker compose --profile standalone up standalone` y probar /health y /api/dev/chat en :8001.
+  standalone:
+    <<: *app
+    ports: ["127.0.0.1:8001:8000"]
+    environment:
+      <<: *app-env
+      RUN_WORKER_IN_API: "true"
+      UVICORN_WORKERS: "1"
+    command: ["sh", "-c", "uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --reload"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: ["standalone"]
+
+  # ---------- tests: base y redis propios, efímeros ----------
+  db-test:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: bolos
+      POSTGRES_PASSWORD: bolos
+      POSTGRES_DB: bolos_test
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bolos"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    profiles: ["test"]
+
+  redis-test:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    profiles: ["test"]
+
+  test:
+    <<: *app
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql+asyncpg://bolos:bolos@db-test:5432/bolos_test
+      REDIS_URL: redis://redis-test:6379/0
+      APP_ENV: test
+    command: ["pytest"]
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    profiles: ["test"]
+
+volumes:
+  pgdata:

@@ -1,0 +1,11 @@
+.env
+.git
+.venv
+__pycache__
+.pytest_cache
+.ruff_cache
+evals/results
+.env.*
+!.env.example
+audit-local
+.import_linter_cache
